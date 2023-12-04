@@ -9,6 +9,7 @@
 #include <sstream>
 #include <fstream>
 #include <csignal>
+#include <vector>
 
 using namespace std;
 
@@ -24,78 +25,103 @@ void DieWithSystemMessage(const char *msg){
     perror(msg);
     exit(1);
 }
-void HandleTCPClient(int clntSocket){
+
+
+void ReceiveFile_And_Write(int clntSocket, string newfilename) {
+    ofstream outputFile(newfilename, ios::binary);
+
+    if (outputFile.is_open()) {
+        char buffer[BUFSIZ];
+        ssize_t numBytesRcvd;
+
+        // Receive data in a loop
+        while ((numBytesRcvd = recv(clntSocket, buffer, BUFSIZ, 0)) > 0) {
+            // Write received data to the file
+            outputFile.write(buffer, numBytesRcvd);
+
+            // Check if the entire file has been received
+            if (numBytesRcvd < BUFSIZ) {
+                break;  // Break the loop if less than BUFSIZ bytes are received
+            }
+
+        }
+
+        cout << "File received and saved as: " << newfilename << std::endl;
+    } else {
+        DieWithSystemMessage("Error opening file for writing.");
+    }
+
+    outputFile.close();
+    cout << "File Closed" << endl;
+}
+void ReadFile_And_Send(int sock,string filePath){
+    ifstream file(filePath, std::ios::binary);
+    if (file.is_open()) {
+        // Get the size of the file
+        file.seekg(0, ios::end);
+        streampos fileSize = file.tellg();
+        file.seekg(0, ios::beg);
+
+        // Read the entire file into a vector
+        vector<char> buffer(fileSize);
+        file.read(buffer.data(), fileSize);
+
+        // Send the file data
+        send(sock, buffer.data(), fileSize, 0);
+        file.close();
+    } else {
+        std::cout << "Failed to open file: " << filePath << std::endl;
+        DieWithSystemMessage("Failed to open file: ");
+    }
+
+}
+
+bool HandleTCPClient(int clntSocket){
     char buffer[BUFSIZ];
     // Receive message from client
 
     /** This is the problem */
-    ssize_t numBytesRcvd = recv(clntSocket, buffer, 600, 0);
-    cout << "What's up" << endl;
+    ssize_t numBytesRcvd = recv(clntSocket, buffer, BUFSIZ, 0);
+    cout<<"focus\n"<<buffer<<"\n";
     if(numBytesRcvd < 0)
         DieWithSystemMessage("recv() failed");
+    else if (numBytesRcvd ==0){
+        return false;
+    }
     // Send received string and receive again until end of system
     buffer[numBytesRcvd] = '\0';
     cout << "Received from client: " << buffer << endl;
     istringstream iss(buffer);
     string requestType, filePath, hostName;
     iss >> requestType >> filePath >> hostName;
+
+    send(clntSocket, "HTTP/1.1 200 OK\r\n", strlen("HTTP/1.1 200 OK\r\n"), 0);
+
     if (requestType == "client_get") {
-        ifstream file(filePath);
-        if (file.is_open()) {
-            // Send HTTP response header
-            send(clntSocket, "HTTP/1.1 200 OK\r\n", BUFSIZ - 1, 0);
-            // Send the file content
-            string line;
-            // Same3 ??
-            while (getline(file, line)) {
-                send(clntSocket, line.c_str(), BUFSIZ-1, 0);
-            }
 
-            // Send a blank line to indicate the end of the file
-            send(clntSocket, "\r\n", BUFSIZ -1, 0);
+        ReadFile_And_Send(clntSocket,filePath);
 
-            file.close();
-        } else {
-            // File not found
-            send(clntSocket, "HTTP/1.1 404 Not Found\r\n\r\n", BUFSIZ-1, 0);
-        }
-    } else if (requestType == "client_post") {
-        // Receive and save the file
-        send(clntSocket, "HTTP/1.1 200 OK\r\n", strlen("HTTP/1.1 200 OK\r\n"), 0);
+    }
+    else if (requestType == "client_post") {
         // Extracting the filename from the original path
         size_t lastSlashPos = filePath.find_last_of('/');
         string filename = (lastSlashPos != string::npos) ? filePath.substr(lastSlashPos + 1) : filePath;
 
         // Appending "_received" to the filename
         size_t dotPos = filename.find_last_of('.');
-        string newFilename = filename.substr(0, dotPos) + "_received" + filename.substr(dotPos);
+        string newfilename = filename.substr(0, dotPos) + "_received" + filename.substr(dotPos);
 
-        ofstream outfile(newFilename, ios::out | ios::binary);
-        while (true) {
-            if (numBytesRcvd == 0) {
-                break; // Connection closed
-            }
-            if (numBytesRcvd < 0) {
-                DieWithSystemMessage("recv() failed");
-            }
-            numBytesRcvd = recv(clntSocket, buffer, BUFSIZ, 0);
-            // Print the content (for debugging purposes)
-        //    cout << "Received content: " << buffer << endl;
-            outfile.write(buffer, numBytesRcvd);
-            if(strstr(buffer, "\r\n")){
-                cout << "FINE" << endl;
-                break;
-            }
-        }
+        ReceiveFile_And_Write(clntSocket,newfilename);
 
-        outfile.close();
-        cout << "File Closed" << endl;
-        // Send HTTP response header
+        // send ok to make user send the next request
+        send(clntSocket, "ok\n", 2, 0);
     }
     cout << "Returning" << endl;
-  //  close(clntSocket);
+    return true;
+    //  close(clntSocket);
 }
 int main(int argc, char *argv[]) {
+
     if(argc != 2)
         DieWithUserMessage("Parameter(s)", "<Server Port>");
     in_port_t servPort = atoi(argv[1]); // local port
@@ -135,10 +161,18 @@ int main(int argc, char *argv[]) {
     else
         puts("Unable to get client address");
 
-    for(;;){
-        int i = 0;
+    cout<<clntName<<"\n";
+    int i = 0;
+
+
+    // it makes all requests from one user
+    while (true){
         cout << i++ << endl;
-        HandleTCPClient(clntSock);
-        cout << "Returned" << endl;
+        bool x=HandleTCPClient(clntSock);
+        if(!x){
+            break;
+        }
+        cout << "Returned1" << endl;
     }
+    cout<<"end\n";
 }

@@ -1,0 +1,5 @@
+client_get photo2.png 127.0.0.1 8080
+client_post text1.txt 127.0.0.1 8080
+client_post text2.txt 127.0.0.1 8080
+client_get text3.txt 127.0.0.1 8080
+client_post photo1.png 127.0.0.1 8080

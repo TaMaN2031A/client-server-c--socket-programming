@@ -1,3 +1,0 @@
-/home/eyad/CLionProjects/bgnet_a4_c_1/cmake-build-debug/CMakeFiles/bgnet_a4_c_1.dir
-/home/eyad/CLionProjects/bgnet_a4_c_1/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/eyad/CLionProjects/bgnet_a4_c_1/cmake-build-debug/CMakeFiles/rebuild_cache.dir
