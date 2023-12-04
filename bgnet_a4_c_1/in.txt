@@ -1,0 +1,4 @@
+client_get s.html 127.0.0.1 8080
+client_get text1_received.txt 127.0.0.1 8080
+client_get text2_received.txt 127.0.0.1 8080
+client_get photo1_received.png 127.0.0.1 8080
