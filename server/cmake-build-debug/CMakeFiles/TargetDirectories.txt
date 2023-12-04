@@ -1,3 +1,3 @@
-/home/karim/CLionProjects/server/cmake-build-debug/CMakeFiles/server.dir
-/home/karim/CLionProjects/server/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/karim/CLionProjects/server/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/eyad/CLionProjects/server/cmake-build-debug/CMakeFiles/server.dir
+/home/eyad/CLionProjects/server/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/eyad/CLionProjects/server/cmake-build-debug/CMakeFiles/rebuild_cache.dir
